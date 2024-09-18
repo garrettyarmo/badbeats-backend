@@ -1,11 +1,11 @@
+import requests
+import os
+from dotenv import load_dotenv
 from .data_storage import (
     store_timeframe_data,
     store_teams_data,
     store_players_data
 )
-import requests
-import os
-from dotenv import load_dotenv
 
 load_dotenv()
 SPORTSDATAIO_API_KEY = os.getenv('SPORTSDATAIO_API_KEY')

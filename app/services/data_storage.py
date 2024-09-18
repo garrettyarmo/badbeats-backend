@@ -1,5 +1,5 @@
-from .db_connection import get_db_connection
 import inspect
+from .db_connection import get_db_connection
 
 def store_timeframe_data(data):
     """

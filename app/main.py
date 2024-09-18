@@ -2,15 +2,15 @@ from datetime import datetime
 from fastapi import FastAPI
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
-from services.data_ingestion import (
-    ingest_timeframe_data,
-    ingest_teams_data,
-    ingest_players_data
-)
 from services.schema_setup import (
     setup_timeframes_table,
     setup_teams_table,
     setup_players_table
+)
+from services.data_ingestion import (
+    ingest_timeframe_data,
+    ingest_teams_data,
+    ingest_players_data
 )
 
 app = FastAPI()
