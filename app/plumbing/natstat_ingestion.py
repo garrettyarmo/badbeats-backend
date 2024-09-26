@@ -186,11 +186,12 @@ def extract_game_code(url):
     else:
         return None  # Return None if no game code is found
     
-async def fetch_player_data(session: ClientSession, player: pd.Series, semaphore: asyncio.Semaphore) -> List[Dict]:
+async def fetch_player_data(session: ClientSession, player: pd.Series, semaphore: asyncio.Semaphore, season: int) -> List[Dict]:
     """
-    Asynchronously fetches and processes data for a single player.
+    Asynchronously fetches and processes data for a single player.**Called from get_player_statlines_async**
+    TODO: get defensive season stats (seem to be more verbose)
     """
-    url = player.api_url
+    url = f"{player.api_url},{season}"
     async with semaphore:
         try:
             async with session.get(url) as response:
@@ -232,7 +233,7 @@ async def fetch_player_data(session: ClientSession, player: pd.Series, semaphore
                         "player_id": player.id,
                         "position": value.get('position'),
                         "date": value.get('date'),
-                        "season": value.get('season'),  # Fixed typo
+                        "season": value.get('season'),
                         "game_id": value.get('game', {}).get('id'),
                         "team_id": value.get('team', {}).get('id'),
                         "team_name": value.get('team', {}).get('name'),
@@ -249,11 +250,18 @@ async def fetch_player_data(session: ClientSession, player: pd.Series, semaphore
                         "rush_yards_per_attempt": value.get('rushypa'),
                         "rushing_touchdowns": value.get('rushtd'),
                         "longest_run": value.get('rushlong'),
+                        "receptions": value.get('rec'),
+                        "receiving_yards": value.get('recyds'),
+                        "receiving_yards_per_reception": value.get('recypr'),
+                        "receiving_touchdowns": value.get('rectd'),
+                        "longest_reception": value.get('reclong'),
+                        "fg_attempted": value.get('kickfga'),
+                        "fg_made": value.get('kickfgm'),
                         "performance_score": value.get('perfscore'),
-                        "performance_score_season_average": value.get('perfscoreseasonavg'),  # Fixed key name
+                        "performance_score_season_average": value.get('perfscoreseasonavg'),
                         "presence_rate": value.get('presencerate'),
                         "presence_rate_adjusted": value.get('adjpresencerate'),
-                        "short_statline": value.get('statline'),
+                        "statline": value.get('statline'),
                     }
 
                     # Extract PCR Stats safely
@@ -312,9 +320,9 @@ async def fetch_player_data(session: ClientSession, player: pd.Series, semaphore
             return []
 
 
-async def get_player_statlines_async(players_df: pd.DataFrame, season: int = 2024) -> pd.DataFrame:
+async def get_player_statlines_async(players_df: pd.DataFrame, seasons=[2024]) -> pd.DataFrame:
     """
-    Asynchronously fetches and compiles player statlines into a DataFrame.
+    Asynchronously fetches and compiles player statlines into a DataFrame.**Called from get_player_statlines**
     """
     player_stat_list: List[Dict] = []
     semaphore = asyncio.Semaphore(100)  # Limit concurrent requests to 100
@@ -322,8 +330,9 @@ async def get_player_statlines_async(players_df: pd.DataFrame, season: int = 202
     connector = aiohttp.TCPConnector(limit=100)  # Adjust limit as needed
     async with aiohttp.ClientSession(connector=connector) as session:
         tasks = [
-            fetch_player_data(session, player, semaphore)
+            fetch_player_data(session, player, semaphore, season)
             for player in players_df.itertuples(index=False)
+            for season in seasons
         ]
 
         # Using tqdm for progress bar (optional)
@@ -335,8 +344,8 @@ async def get_player_statlines_async(players_df: pd.DataFrame, season: int = 202
     players_df_result = pd.DataFrame(player_stat_list)
     return players_df_result
 
-def get_player_statlines(players_df: pd.DataFrame, season: int = 2024) -> pd.DataFrame:
+def get_player_statlines(players_df: pd.DataFrame, seasons=[2024]) -> pd.DataFrame:
     """
     Synchronous wrapper to execute the asynchronous statline fetching. NOTE: Unsure if season param does anything 
     """
-    return asyncio.run(get_player_statlines_async(players_df, season))
+    return asyncio.run(get_player_statlines_async(players_df, seasons))
